@@ -1,0 +1,25 @@
+name: MACH_VII_v2.0
+channels:
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+    - fastapi==0.99.1
+    - uvicorn==0.40.0
+    - websockets==14.2
+    - requests==2.32.3
+    - numpy==2.2.3
+    - opencv-python==4.11.0.86
+    - ultralytics==8.3.70
+    - langchain==0.2.16
+    - langchain-community==0.2.16
+    - langchain-core==0.2.38
+    - langchain-text-splitters==0.2.4
+    - langsmith==0.1.147
+    - pydantic==1.10.21
+    - torch==2.6.0
+    - torchvision==0.21.0
+    - pybullet==3.2.6
+    - falkordb==1.4.0
+    - python-dotenv==1.0.1

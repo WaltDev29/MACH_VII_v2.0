@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+:root {
+  background-color: #000000;
+  color: #ffffff;
+  overflow: hidden;
+  /* Prevent scrollbars for the face UI */
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+}
