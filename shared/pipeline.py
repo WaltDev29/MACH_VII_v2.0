@@ -12,7 +12,7 @@ import uuid
 
 class SystemPipeline:
     """
-    7-레이어 아키텍처의 단방향 데이터 흐름을 오케스트레이션하는 클래스입니다.
+    싱글톤 패턴으로 7-레이어 아키텍처의 단방향 데이터 흐름을 오케스트레이션하는 클래스입니다.
     Sensor -> State -> Brain -> Strategy -> Expression -> Embodiment -> Memory
     순서로 데이터가 흐르도록 제어합니다.
     """
@@ -30,11 +30,15 @@ class SystemPipeline:
     def _init(self):
         self.running = False
         self.components = {} # 각 레이어의 핸들러 등록 공간
+        self.emotion_ctrl = None # 자주 쓰이는 감정 컨트롤러 캐싱용
 
     def register_component(self, name: str, component: Any):
         """레이어별 컴포넌트를 등록합니다."""
         self.components[name] = component
+        if name == "emotion_controller":
+            self.emotion_ctrl = component
         print(f"[Pipeline] 컴포넌트 등록됨: {name}")
+        # 각 모듈이 시작될 때 파이프라인을 등록하고 정상 등록 상황을 로그로 확인할 수 있도록 함
 
     def process_brain_intent(self, intent: Any):
         """
@@ -44,15 +48,18 @@ class SystemPipeline:
         # 0. 의도 표준화 (Standardization)
         if isinstance(intent, str):
             intent_enum = ActionIntent.from_str(intent)
+        elif isinstance(intent, ActionIntent):
+            intent_enum = intent
         else:
-            intent_enum = intent if isinstance(intent, ActionIntent) else ActionIntent.UNKNOWN
+            intent_enum = ActionIntent.UNKNOWN
 
         print(f"\n[Pipeline] === 파이프라인 실행 시작 (Intent: {intent_enum.name}) ===")
         
         # 시작 감정 상태 수집 (Layer 5 이전)
-        start_emotion = self.components.get("emotion_controller").get_current_emotion()["vector"]
+        start_emotion = self.emotion_ctrl.get_current_emotion()["vector"] if self.emotion_ctrl else [0]*6
 
         # 1. Strategy Filtering (Layer 4)
+        # strategy_manager에게 "이 행동을 해도 안전한가?" 혹은 "지금 상황에 맞는가?" 등을 확인
         if not strategy_manager.filter_action(intent_enum.value):
             print(f"[Pipeline] [Layer 4: Strategy] 행동이 차단되었습니다: {intent_enum.name}")
             broadcaster.publish("agent_thought", f"[Strategy] 현재 전략 모드에서 차단된 행동입니다: {intent_enum.name}")
@@ -60,6 +67,7 @@ class SystemPipeline:
 
         # 2. Expression / Emotion Mapping (Layer 5)
         # 표준화된 의도에 따른 감정 상태 변화 유도
+        # 표정부 완전 구현 시 수정 예정
         emotion_patch = {}
         if intent_enum == ActionIntent.GREET:
             emotion_patch = {"confidence": 0.8, "frustration": 0.0}
@@ -68,13 +76,14 @@ class SystemPipeline:
         elif intent_enum == ActionIntent.STOP:
             emotion_patch = {"frustration": 0.5, "focus": 0.8}
         
-        if emotion_patch:
-            self.components.get("emotion_controller").update_target(emotion_patch)
+        if emotion_patch and self.emotion_ctrl:
+            self.emotion_ctrl.update_target(emotion_patch)
         
         # 종료(목표) 감정 상태 수집
-        end_emotion = self.components.get("emotion_controller").get_current_emotion()["vector"]
+        end_emotion = self.emotion_ctrl.get_current_emotion()["vector"] if self.emotion_ctrl else [0]*6
 
         # 3. Embodiment Execution (Layer 6)
+        # broadcaster.publish를 통해 제어 루프에 신호 전달
         system_state.current_intent = intent_enum.value
         broadcaster.publish("action_intent", intent_enum.value)
         
@@ -99,13 +108,13 @@ class SystemPipeline:
 
     def get_system_snapshot(self) -> Dict[str, Any]:
         """
-        단방향 흐름에 따라 수집된 전체 시스템 상태의 정합성 있는 스냅샷을 반환합니다.
+        단방향 흐름에 따라 수집된 전체 시스템 상태의 정합성 있는 스냅샷을 반환하는 종합 메소드.
         UI 스트리밍 등에 사용됩니다.
         """
         # 1. Sensor & State 단계의 데이터를 최신화하여 가져옴
         return {
             "brain": broadcaster.get_snapshot(),
-            "emotion": self.components.get("emotion_controller").get_current_emotion(),
+            "emotion": self.emotion_ctrl.get_current_emotion() if self.emotion_ctrl else {},
             "perception": system_state.perception_data,
             "robot": {
                 "is_moving": system_state.robot.is_moving,

@@ -2,9 +2,13 @@ import numpy as np
 
 class KalmanFilter:
     """
-    물체의 위치나 상태의 노이즈를 제거하여 부드럽게 추적하는 필터입니다.
+    물체의 위치나 상태의 노이즈를 제거하여 부드럽게 추적하는 칼만 필터입니다.
     YOLO 탐지 좌표의 깜빡임(Flickering)을 방지하는 데 사용됩니다.
     """
+
+    # 예측 (Predict): "이전 상태를 보니 다음에도 이쯤 있겠지?" 하고 예상합니다.
+    # 업데이트 (Update): 실제 들어온 측정값(measurement)과 자신의 예측값을 비교합니다.
+    # 칼만 이득 (Kalman Gain): 측정값에 노이즈가 많으면 내 예측을 더 믿고, 측정값이 정확해 보이면 측정값을 더 믿도록 비중을 조절합니다.
 
     def __init__(self, process_variance=1e-5, measurement_variance=1e-1**2):
         """

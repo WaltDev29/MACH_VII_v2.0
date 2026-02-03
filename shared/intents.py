@@ -1,5 +1,8 @@
 from enum import Enum
 
+# 현재는 대화를 진행하며 사용자 명령 자연어에 따른 동작 모션을 수행하는 의도로 제작된 열거형으로, Brain 레이어에서 결정되어 Pipeline을 통해 하위 레이어로 전달됩니다.
+# 추후 동작 추가나 새로운 방식으로 개선하는 등 개선의 여지가 있습니다.(아직 방법은 생각 안남)
+
 class ActionIntent(str, Enum):
     """
     맹칠이(MACH-VII)의 최종 판단 결과(의도)를 표준화한 열거형입니다.
@@ -7,7 +10,7 @@ class ActionIntent(str, Enum):
     """
     # 1. 상호작용 (Interaction)
     GREET = "GREET"               # 인사, 환영
-    TALK = "TALK"                 # 일반 대화 (동작 없음)
+    TALK = "TALK"                 # 일반 대화 (현재 동작 없음)
     
     # 2. 물체 조작 (Manipulation)
     PICK_UP = "PICK_UP"           # 물체 집기

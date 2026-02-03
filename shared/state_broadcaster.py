@@ -2,6 +2,8 @@ import threading
 import time
 from typing import Dict, Any, List, Callable
 
+# 아직 구현되지 않은 클래스가 있음 추후 UI 구축 된 후 사용 될 부분
+
 class StateBroadcaster:
     """
     LogicBrain이 상태를 발행하고 감정 시스템/UI가 이를 구독할 때 사용하는 싱글톤 브로드캐스터입니다.
@@ -20,11 +22,11 @@ class StateBroadcaster:
     def _init(self):
         self.subscribers: List[Callable[[Dict[str, Any]], None]] = []
         self.latest_state = {
-            "agent_state": "IDLE",     # PLANNING, EXECUTING, RECOVERING, IDLE
+            "agent_state": "IDLE",     # PLANNING, EXECUTING, RECOVERING, IDLE 등 로봇의 상태
             "object_type": "none",     # 컵, 공 등
             "episode_result": "none",  # 성공(success), 실패(failure)
             "robot_status": "ok",      # 정상(ok), 오류(error)
-            "chat_history": [],        # List of {"role": "bot", "text": "..."}
+            "chat_history": [],        # List of {"role": "bot", "text": "..."} 채팅 대화 이력으로 최대 20개까지만 유지
             "timestamp": time.time()
         }
     
@@ -50,6 +52,7 @@ class StateBroadcaster:
         # 1차적으로는 챗 로그에 포함시키되 role='system' 또는 'thought'로 구분합니다.
         self.log_chat("thought", text)
     
+    # 나중에 UI 서버가 시작될 때, UI에 실시간 데이터를 뿌려주는 함수가 여기에 subscribe 될 예정
     def subscribe(self, callback: Callable[[Dict[str, Any]], None]):
         """상태 업데이트를 수신할 콜백 함수를 등록합니다."""
         with self._lock:
@@ -66,7 +69,7 @@ class StateBroadcaster:
             self.latest_state["timestamp"] = time.time()
             snapshot = self.latest_state.copy()
             
-        # 구독자들에게 알림 (이상적으로는 비동기여야 하지만 MVP를 위해 단순 루프 사용)
+        # 구독자들에게 알림 (비동기여야 하지만 우선 단순 루프 사용으로 구현됨)
         for sub in self.subscribers:
             try:
                 sub(snapshot)

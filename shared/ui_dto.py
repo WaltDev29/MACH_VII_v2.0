@@ -13,7 +13,7 @@ class UserRequestType(str, Enum):
 class RobotTarget(str, Enum):
     """제어 명령이 최종적으로 전달될 물리/가상 하드웨어를 선택합니다."""
     VIRTUAL = "pybullet"             # PyBullet 시뮬레이터 내 가상 로봇
-    PHYSICAL = "dofbot"              # 실물 Dofbot 암 (Serial/Jetson 기반 제어)
+    PHYSICAL = "dofbot"              # 실물 Dofbot 팔 (Serial/Jetson 기반 제어)
 
 # 3. 카메라 소스 선택 (Sensor Layer)
 class CameraSource(str, Enum):
@@ -25,13 +25,13 @@ class CameraSource(str, Enum):
 class OperationMode(str, Enum):
     """맹칠이의 사고 및 의도 결정 프로세스를 정의합니다. (7 Layer - Layer 3 담당)"""
     
-    RULE_BASED = "rule_based"        
-    # [설명] 사전 정의된 IF-THEN 로직이나 하드코딩된 시나리오에 따라 동작합니다.
-    # 결정론적으로 움직여야 할 때나 초기 셋업 시 유용합니다.
+    RULE_BASED = "rule_based" # 안전 모드       
+    # 사전 정의된 로직이나 하드코딩된 시나리오에 따라 동작합니다.
     
-    MEMORY_BASED = "memory_based"    
-    # [설명] 과거 결정 데이터(FalkorDB)와 현재 상황을 VLM(LLM)이 대조하여 판단합니다.
-    # 예기치 못한 상황 대응이나 능동적인 문제 해결 시 사용됩니다.
+    MEMORY_BASED = "memory_based" # 리드미상 탐험모드 -> Exploitation (활용) 모드 로 개선 예정    
+    # FalkorDB 데이터와 현재 상황을 비교하여 판단
+
+    # MEMORY_BASED = "thinking_based" # 추후 추가할 진짜 탐험모드 FalkorDB 참고로 삼아 진짜 사고하는 llm 기반
 
 # 5. 시스템 하부 구조 설정을 위한 DTO
 class SystemConfigurationDTO(BaseModel):
@@ -42,11 +42,11 @@ class SystemConfigurationDTO(BaseModel):
     op_mode: OperationMode = Field(..., description="맹칠이의 판단 엔진 모드 설정")
     is_emergency_stop: bool = Field(False, description="긴급 정지 상태 여부 (True 시 모든 Embodiment 동작 정지)")
 
-# 6. 최종 통합 요청 DTO (Perfect Interface)
+# 6. 최종 통합 요청 DTO
 class UserRequestDTO(BaseModel):
     """
     UI에서 서버(Brain/API)로 전달되는 유일한 규격화된 메시지 패킷입니다.
-    Strict Interface 원칙에 따라 모든 레이어 진입 시 이 형식을 따릅니다.
+    전송 통일성을 위해 모든 레이어 진입 시 이 형식을 따라야 합니다.
     """
     
     request_type: UserRequestType = Field(..., description="요청의 성격 (COMMAND/CONFIG_CHANGE/EMERGENCY)")
@@ -60,3 +60,4 @@ class UserRequestDTO(BaseModel):
     class Config:
         """Pydantic 설정: JSON 직렬화 시 Enum 값을 문자열로 변환하여 호환성 유지"""
         use_enum_values = True
+    # 왜 Enum 값을 문자열로 변환해야 하냐면, JSON과 UI는 문자열로 변환된 데이터만을 처리할 수 있고, 내부 로직을 변경해도 데이터 통일성을 유지할 수 있기 때문
