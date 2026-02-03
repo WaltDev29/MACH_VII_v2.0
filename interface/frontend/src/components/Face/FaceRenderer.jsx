@@ -19,53 +19,18 @@ const FaceRenderer = ({
 }) => {
     const CANVAS_SIZE = 400;
 
-    // -- 생동감 상태 (Liveness State) --
-    const [blinkState, setBlinkState] = useState(1.0);
-    const [jitter, setJitter] = useState({ x: 0, y: 0 });
-
-    // 1. 눈 깜빡임 로직 (Blinking Logic)
-    useEffect(() => {
-        if (!isAlive) return;
-
-        let timeout;
-        const triggerBlink = () => {
-            setBlinkState(0);
-            setTimeout(() => setBlinkState(1), 150);
-
-            const nextInterval = Math.random() * 4000 + 2000;
-            timeout = setTimeout(triggerBlink, nextInterval);
-        };
-
-        timeout = setTimeout(triggerBlink, 3000);
-        return () => clearTimeout(timeout);
-    }, [isAlive]);
-
-    // 2. 미세 떨림 로직 (Micro-saccades/Jitter)
-    useEffect(() => {
-        if (!isAlive) return;
-
-        const interval = setInterval(() => {
-            setJitter({
-                x: (Math.random() - 0.5) * 2,
-                y: (Math.random() - 0.5) * 2
-            });
-        }, 500);
-
-        return () => clearInterval(interval);
-    }, [isAlive]);
-
-    // 계산 (간단한 눈 크기 보정)
-    const finalLeftEyeScale = leftEye.openness * blinkState;
-    const finalRightEyeScale = rightEye.openness * blinkState;
+    // 계산 (간단한 눈 크기 보정) - Context에서 이미 처리되지만, 안전장치로 남겨둠
+    // Context에서 넘어오는 값은 이미 blink가 반영된 값이므로 여기서는 1을 곱하는 셈이 됨 (혹은 props에 따라 다름)
+    // 하지만 Liveness Layer에서 처리했으므로, 여기서는 그냥 props 값을 그대로 씁니다.
 
     // 좌표 계산 (기본값 + 사용자 오프셋)
     // 눈 Y 좌표: 160 + 15 (기준점 + 보정) = 175
-    const leftEyeX = 110 + gazeX + jitter.x;
-    const rightEyeX = 290 + gazeX + jitter.x;
-    const eyeY = 175 + gazeY + jitter.y;
+    const leftEyeX = 110 + gazeX;
+    const rightEyeX = 290 + gazeX;
+    const eyeY = 175 + gazeY;
 
-    const mouthXPos = 200 + (gazeX * 0.3) + jitter.x + mouthX;
-    const mouthYPos = 260 + (gazeY * 0.3) + jitter.y + mouthY;
+    const mouthXPos = 200 + (gazeX * 0.3) + mouthX;
+    const mouthYPos = 260 + (gazeY * 0.3) + mouthY;
 
     // 입 모양 (기본값 + 사용자 오프셋)
     // 곡률 기본값: 14, 개방 기본값: 29
@@ -105,7 +70,7 @@ const FaceRenderer = ({
                         y={eyeY}
                         width={100}
                         height={110}
-                        scaleY={finalLeftEyeScale}
+                        scaleY={leftEye.openness}
                         squeeze={leftEye.squeeze}
                         smile={leftEye.smile}
                         rotation={leftEye.rotation}
@@ -119,7 +84,7 @@ const FaceRenderer = ({
                         y={eyeY}
                         width={100}
                         height={110}
-                        scaleY={finalRightEyeScale}
+                        scaleY={rightEye.openness}
                         squeeze={rightEye.squeeze}
                         smile={rightEye.smile}
                         rotation={rightEye.rotation}

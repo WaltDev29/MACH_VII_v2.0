@@ -70,12 +70,12 @@ async def websocket_endpoint(websocket: WebSocket):
             await websocket.send_text(json.dumps(packet))
             await asyncio.sleep(0.016) # ~60fps
             
-    except WebSocketDisconnect:
+    except (WebSocketDisconnect, ConnectionResetError):
+        # 정상적인 연결 종료 또는 클라이언트 강제 종료 시 무시
         pass
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        print(f"WS Error: {e}")
+        # 그 외 에러는 로그로 남기되, 너무 시끄럽지 않게
+        print(f"[WS] Error during streaming: {e}")
 
 # API 엔드포인트: 통합 명령 및 설정 (Unified Interface)
 @app.post("/api/request")

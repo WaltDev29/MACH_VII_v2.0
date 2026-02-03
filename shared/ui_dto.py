@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from enum import Enum
-from typing import Optional
+from typing import Optional, Dict, Any
 
 # 1. 요청 성격 구분을 위한 열거형 (Request Dispatching)
 class UserRequestType(str, Enum):
@@ -61,3 +61,35 @@ class UserRequestDTO(BaseModel):
         """Pydantic 설정: JSON 직렬화 시 Enum 값을 문자열로 변환하여 호환성 유지"""
         use_enum_values = True
     # 왜 Enum 값을 문자열로 변환해야 하냐면, JSON과 UI는 문자열로 변환된 데이터만을 처리할 수 있고, 내부 로직을 변경해도 데이터 통일성을 유지할 수 있기 때문
+
+# 7. 감정 상태 데이터 (Phase 2 추가)
+class EmotionData(BaseModel):
+    """
+    백엔드(Brain)에서 분석된 감정 상태를 프론트엔드로 전달하기 위한 데이터셋입니다.
+    벡터 값과 함께, UI가 즉시 렌더링할 수 있는 '프리셋 ID'를 포함합니다.
+    """
+    vector: Dict[str, float] = Field(..., description="Focus, Confidence 등 6차원 감정 벡터")
+    preset_id: str = Field(..., description="프론트엔드 FaceContext가 사용할 표정 프리셋 ID (예: happy, angry)")
+    muscles: Optional[Dict[str, Any]] = Field({}, description="눈, 입 등의 저수준 미세 제어 파라미터 (선택 사항)")
+
+# 8. 시스템 전체 스냅샷 (Phase 2 추가 - WebSocket 패킷 규격)
+class SystemSnapshot(BaseModel):
+    """
+    WebSocket(/ws)을 통해 프론트엔드로 실시간 전송되는 시스템의 전체 상태입니다.
+    7-Layer 아키텍처의 각 구성 요소 상태를 모두 포함하여 정합성을 보장합니다.
+    """
+    timestamp: float = Field(..., description="스냅샷 생성 시간 (Unix Timestamp)")
+    
+    # 각 레이어별 상태 데이터
+    brain: Dict[str, Any] = Field(..., description="[Layer 3] LogicBrain 상태 (현재 생각, 작업 상태 등)")
+    emotion: EmotionData = Field(..., description="[Layer 5] 현재 감정 상태 및 표정 프리셋")
+    perception: Dict[str, Any] = Field(..., description="[Layer 1] 인식된 객체 및 센서 데이터")
+    
+    # 로봇 상태 (간소화)
+    robot: Dict[str, Any] = Field(..., description="[Layer 6] 로봇의 물리적 상태 (배터리, 모드, 이동 여부)")
+    
+    # 전략 컨텍스트
+    strategy: Dict[str, Any] = Field(..., description="[Layer 4] 현재 전략 모드 및 판단 근거")
+    
+    # 시각화 데이터
+    last_frame: Optional[str] = Field(None, description="[Layer 1] Base64로 인코딩된 실시간 카메라 프레임")

@@ -1,101 +1,33 @@
-import React, { useState } from 'react';
+import React from 'react';
 import FaceRenderer from './Face/FaceRenderer';
 import FaceController from './Controller/FaceController';
 import { EXPRESSIONS } from '../constants/expressions';
 import { Smile } from 'lucide-react';
+import { useFace } from '../context/FaceContext';
 
 
-//디버깅용 상위 컴포넌트입니다.
+// 디버깅용 상위 컴포넌트입니다.
+// 로직은 FaceContext로 이동되었습니다.
 
 function FaceControl() {
-    const [params, setParams] = useState(EXPRESSIONS[0].base);
-    const [currentExprId, setCurrentExprId] = useState(EXPRESSIONS[0].id);
-    const [motionOffsets, setMotionOffsets] = useState({});
-
-    // 실시간 모션 루프 (RequestAnimationFrame)
-    React.useEffect(() => {
-        const expression = EXPRESSIONS.find(e => e.id === currentExprId);
-        if (!expression || !expression.motion) {
-            setMotionOffsets({});
-            return;
-        }
-
-        let frameId;
-        const startTime = Date.now();
-
-        const update = () => {
-            const elapsed = (Date.now() - startTime) / 1000;
-            const newOffsets = {};
-
-            const calc = (m) => Math.sin(elapsed * m.freq * Math.PI * 2) * m.amp;
-
-            // 모션 계산 로직
-            Object.entries(expression.motion).forEach(([key, value]) => {
-                if (key === 'all') {
-                    // 전체 지터 (고주파)
-                    newOffsets.all = (Math.random() - 0.5) * value.amp;
-                } else if (typeof value === 'object' && !value.amp) {
-                    // 중첩 객체 (e.g., leftEye: { openness: {amp, freq} })
-                    newOffsets[key] = {};
-                    Object.entries(value).forEach(([subKey, subValue]) => {
-                        newOffsets[key][subKey] = calc(subValue);
-                    });
-                } else {
-                    // 일반 값
-                    newOffsets[key] = calc(value);
-                }
-            });
-
-            setMotionOffsets(newOffsets);
-            frameId = requestAnimationFrame(update);
-        };
-
-        frameId = requestAnimationFrame(update);
-        return () => cancelAnimationFrame(frameId);
-    }, [currentExprId]);
+    const {
+        currentExprId,
+        setExpression,
+        renderValues, // 보간된 최종 렌더링 값 (for FaceRenderer)
+        targetValues, // UI Slider 표시용 (for FaceController)
+        setParams     // UI Slider 제어용 (for FaceController)
+    } = useFace();
 
     // 프리셋 적용 및 슬라이더 동기화
     const handlePresetChange = (id) => {
-        const expr = EXPRESSIONS.find(e => e.id === id);
-        if (expr) {
-            setCurrentExprId(id);
-            setParams(expr.base);
-        }
-    };
-
-    // 최종 파라미터 계산 (Base + Motion + Jitter)
-    const getFinalParams = () => {
-        const final = JSON.parse(JSON.stringify(params)); // Deep clone
-
-        const applyOffset = (target, offset) => {
-            if (!offset) return;
-            Object.entries(offset).forEach(([k, v]) => {
-                if (k === 'all') return;
-                if (typeof v === 'object') {
-                    if (!target[k]) target[k] = {};
-                    applyOffset(target[k], v);
-                } else {
-                    target[k] = (target[k] || 0) + v;
-                }
-            });
-        };
-
-        applyOffset(final, motionOffsets);
-
-        // 'all' 모션 (전체 지터) 적용
-        if (motionOffsets.all) {
-            const jitter = motionOffsets.all;
-            final.gazeX += jitter;
-            final.gazeY += jitter;
-            final.mouthX += jitter;
-            final.mouthY += jitter;
-        }
-
-        return final;
+        setExpression(id);
     };
 
     // 글로우 강도는 0.6으로 고정
     const glowIntensity = 0.6;
+
+    // renderValues가 아직 없으면(로딩 중) 렌더링 지연
+    if (!renderValues) return null;
 
     return (
         // 전체 컨테이너: 라이트 모드 배경
@@ -112,7 +44,8 @@ function FaceControl() {
                     - aspect-square: 정사각형 비율 유지
                 */}
                 <div className="relative aspect-square h-[80vh] max-w-full flex justify-center items-center pointer-events-auto">
-                    <FaceRenderer {...getFinalParams()} glowIntensity={glowIntensity} />
+                    {/* FaceRenderer에게는 Context에서 계산된 최종 renderValues를 그대로 전달 */}
+                    <FaceRenderer {...renderValues} glowIntensity={glowIntensity} />
                 </div>
 
                 {/* 표정 프리셋 선택기 (Radio Buttons) - 2열 그리드 및 디자인 동기화 */}
@@ -151,10 +84,12 @@ function FaceControl() {
             {/* 
                 플로팅 컨트롤러 레이어 (Floating Controller Layer)
                 - 화면 오른쪽에 절대 좌표로 배치됩니다.
-                - 얼굴 렌더링 레이어의 레이아웃에 영향을 주지 않습니다.
+                - 슬라이더 제어 시 targetValues(목표값)를 보여주고, setParams로 목표값을 수정합니다.
             */}
             <div className="absolute right-8 top-1/2 -translate-y-1/2 w-auto h-auto z-50">
-                <FaceController params={params} setParams={setParams} />
+                {targetValues && (
+                    <FaceController params={targetValues} setParams={setParams} />
+                )}
             </div>
 
         </div>

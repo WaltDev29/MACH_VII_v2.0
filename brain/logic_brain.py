@@ -168,8 +168,22 @@ class LogicBrain:
                 else:
                     context_str = "\n\n[현재 시야]: 물체 없음"
             
-            # 입력 메시지에 컨텍스트 추가
-            full_input = f"{task_command}{context_str}"
+            # [Context Injection] 감정(Emotion) 상태 주입 (Phase 2)
+            # LLM이 자신의 감정 상태를 인지하고 페르소나에 반영하도록 합니다.
+            # emotion_controller는 background에서 system_state를 계속 업데이트하고 있습니다.
+            from expression.emotion_controller import emotion_controller
+            current_emotion = system_state.emotion
+            preset_id = emotion_controller.get_closest_preset()
+            
+            emotion_str = (
+                f"\n[현재 감정]: {preset_id.upper()} "
+                f"(Focus: {current_emotion.focus:.2f}, "
+                f"Confidence: {current_emotion.confidence:.2f}, "
+                f"Frustration: {current_emotion.frustration:.2f})"
+            )
+            
+            # 입력 메시지에 컨텍스트 추가 (시야 정보 + 감정 정보)
+            full_input = f"{task_command}{context_str}{emotion_str}"
             
             # 동기 함수인 agent_executor.invoke를 비동기로 실행
             response = await loop.run_in_executor(

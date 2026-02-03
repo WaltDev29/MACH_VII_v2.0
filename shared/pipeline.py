@@ -8,6 +8,7 @@ from state.system_state import system_state
 from strategy.strategy_manager import strategy_manager
 from shared.intents import ActionIntent
 from memory.falkordb_manager import memory_manager
+from shared.ui_dto import SystemSnapshot
 import uuid
 
 class SystemPipeline:
@@ -111,20 +112,29 @@ class SystemPipeline:
         단방향 흐름에 따라 수집된 전체 시스템 상태의 정합성 있는 스냅샷을 반환하는 종합 메소드.
         UI 스트리밍 등에 사용됩니다.
         """
-        # 1. Sensor & State 단계의 데이터를 최신화하여 가져옴
-        return {
-            "brain": broadcaster.get_snapshot(),
-            "emotion": self.emotion_ctrl.get_current_emotion() if self.emotion_ctrl else {},
-            "perception": system_state.perception_data,
-            "robot": {
+        # [Phase 2] SystemSnapshot DTO를 사용하여 데이터 구조의 일관성을 강제합니다.
+        
+        # 감정 데이터 준비
+        emotion_data = self.emotion_ctrl.get_current_emotion() if self.emotion_ctrl else {
+             "vector": {}, "muscles": {}, "preset_id": "neutral"
+        }
+
+        # DTO 생성
+        snapshot = SystemSnapshot(
+            timestamp=time.time(),
+            brain=broadcaster.get_snapshot(),
+            emotion=emotion_data,
+            perception=system_state.perception_data,
+            robot={
                 "is_moving": system_state.robot.is_moving,
                 "battery": system_state.robot.battery_level,
                 "mode": system_state.robot.current_mode
             },
-            "strategy": strategy_manager.get_context(),
-            "timestamp": time.time(),
-            "last_frame": system_state.last_frame_base64
-        }
+            strategy=strategy_manager.get_context().copy(), # 복사본 사용
+            last_frame=system_state.last_frame_base64
+        )
+        
+        return snapshot.dict()
 
 # 싱글톤 인스턴스
 pipeline = SystemPipeline()

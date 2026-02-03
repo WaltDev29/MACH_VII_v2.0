@@ -82,11 +82,11 @@
 *   Safe / Explore / Combat 모드, 성격 필터
 *   **출력**: `StrategyState`
 
-### 5️⃣ Expression Engine — 표현 엔진
+### 5️⃣ Expression Layer — 표현 계층
 *   의도를 물리적 움직임으로 변환합니다.
-*   표정, 시선, 고개 각도
-*   **60fps 보간** (부드러운 움직임)
-*   **출력**: `ExpressionFrame`
+*   **EmotionController (Backend)**: 상태 벡터 분석 및 프리셋 결정 (Happy, Angry 등)
+*   **FaceContext (Frontend)**: 결정된 프리셋을 60fps로 부드럽게 렌더링 (Liveness 포함)
+*   **출력**: `ExpressionFrame` (WebSocket Packet)
 
 ### 6️⃣ Embodiment Layer — 구현 계층
 *   보이거나 움직이게 합니다.

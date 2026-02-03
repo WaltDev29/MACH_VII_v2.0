@@ -61,7 +61,21 @@ const Eye = ({
         Z
     `.replace(/\s+/g, ' ');
 
-    const currentPath = smile > 0 ? smilePath : (smile < 0 ? lidPath : normalPath);
+    // [Path Switching Logic]
+    // smile 값에 따라 눈 모양 경로를 바꿉니다.
+    // 기존 로직은 0을 기준으로 strict하게 분기하여, 부동소수점 노이즈(-0.000001 등) 만으로도
+    // lidPath(눈꺼풀)로 진입해 눈 윗부분이 잘리는(반달 모양) 시각적 결함을 유발했습니다.
+    // 이를 방지하기 위해 0.05 정도의 여유폭(Threshold)을 둡니다.
+    const THRESHOLD = 0.05;
+
+    let currentPath = normalPath;
+    if (smile > THRESHOLD) {
+        currentPath = smilePath;
+    } else if (smile < -THRESHOLD) {
+        currentPath = lidPath;
+    } else {
+        currentPath = normalPath;
+    }
 
     // 회전: 왼쪽 눈과 오른쪽 눈이 대칭적으로 회전하도록 설정합니다.
     // 회전값이 양수일 때 왼쪽 눈은 시계 반대 방향, 오른쪽 눈은 시계 방향으로 회전하여 "화난" 또는 "집중한" 표정을 만듭니다.

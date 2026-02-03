@@ -46,9 +46,48 @@
     - `api_server`가 이 영상을 웹소켓으로 프론트엔드에 다시 쏴줍니다.
 5. **화면 갱신**: 사용자는 실시간으로 로봇이 움직이는 모습을 보게 됩니다.
 
+### 시스템 아키텍처 (System Architecture)
+```mermaid
+graph TD
+    User[사용자] -->|채팅/명령| UI[Frontend (React)]
+    UI -->|REST API| Brain[Backend (Python)]
+    Brain -->|상태 변화| EmotionController[Emotion Controller]
+    
+    subgraph "Phase 2: Emotion Bridge"
+        EmotionController -->|1. 감정 벡터 분석| Mapper[Preset Mapper]
+        Mapper -->|2. 프리셋 ID 결정 (e.g. Happy)| WS_Server[WebSocket Server]
+        WS_Server -->|3. 실시간 전송 (JSON)| WS_Client[FaceContext (React)]
+    end
+    
+    WS_Client -->|4. 표정 렌더링| FaceRenderer[Face Renderer (SVG)]
+```
+
+### 데이터 흐름 상세
+1. **사용자 입력**: 채팅창에 명령을 입력합니다.
+2. **프론트엔드**: `UserRequestDTO`를 JSON으로 변환하여 `POST /api/request`로 보냅니다.
+3. **백엔드(API Server)**: 요청을 받아 `RobotController`에게 전달하고 로직을 수행합니다.
+4. **감정 동기화 (Phase 2)**:
+    - `EmotionController`가 로봇의 상태(성공, 실패, 대기 등)를 6차원 벡터로 변환합니다.
+    - `get_closest_preset()` 함수가 벡터를 분석하여 가장 적절한 **표정 프리셋 ID**를 결정합니다.
+    - `SystemSnapshot` 패킷에 이 ID를 담아 WebSocket으로 방송합니다.
+5. **화면 갱신**: `FaceContext`가 패킷을 수신하면 즉시 해당 표정으로 전환합니다. (수동 제어 시에도 동기화 유지)
+
 ---
 
 ## 🔗 상속 및 관계 (Relationships)
 - **상위**: 사용자(User)
 - **연결**: `Shared` (UserRequestDTO 정의 사용), `Embodiment` (로봇 제어 요청)
-- **특징**: 철저하게 **"UI is Dumb"** 원칙을 따릅니다. 화면은 예쁘게 보여주는 것(Rendering)과 사용자의 입력을 전달(Pass-through)하는 역할만 합니다.
+- **특징**: 철저하게 **"UI is Dumb"** 원칙을 따릅니다. 화면은 예쁘게 보여주는 것(Rendering)과 사용자의 입력을 전달(Pass-through)하는 역할만 합니다. 모든 판단은 백엔드가 수행합니다.
+
+---
+
+## 🔮 향후 개선 과제 (Future Improvements)
+감정 제어 시스템(Emotion Control System)은 현재 구현 완료되었으나, 지속적인 테스트와 디테일 수정이 필요합니다.
+
+1.  **데이터베이스 스키마 확장 (DB Schema)**:
+    - 감정 변화 이력(Emotion History)을 저장하기 위한 새로운 Node/Edge 설계가 필요할 수 있습니다.
+    - 예: `(Agent)-[:FELT]->(EmotionEvent)`
+2.  **보간 로직 튜닝 (Interpolation)**:
+    - 현재의 선형/Deep Lerp 방식이 어색할 경우, Bezier Curve 기반의 더 정교한 보간으로 교체해야 합니다.
+3.  **로깅 강화 (Logging)**:
+    - 디버깅을 위해 프론트엔드/백엔드 인터랙션 로그를 더 세분화하여 기록해야 합니다.

@@ -1,10 +1,13 @@
 import React from 'react';
 import FaceControl from './components/FaceControl';
+import { FaceProvider } from './context/FaceContext';
 
 function App() {
   return (
     <div className="App">
-      <FaceControl />
+      <FaceProvider>
+        <FaceControl />
+      </FaceProvider>
     </div>
   );
 }
