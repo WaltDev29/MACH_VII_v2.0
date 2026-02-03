@@ -74,3 +74,6 @@ dist-ssr/
 
 # Persistence Data (FalkorDB)
 memory/data/
+
+# Deployment / Reference Files
+pybullet_deploy/
