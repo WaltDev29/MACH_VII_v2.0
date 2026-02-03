@@ -173,6 +173,7 @@ export const EXPRESSIONS = [
             gazeY: { amp: 20, freq: 0.1 }
         }
     },
+    //현재 여기까지 구현 완료
     {
         id: "tired",
         label: "피곤함",

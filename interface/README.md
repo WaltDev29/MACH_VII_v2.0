@@ -27,18 +27,19 @@
 ### 2. `frontend/` (웹 화면)
 - **프로젝트 타입**: React 기반의 싱글 페이지 애플리케이션(SPA)입니다.
 - **주요 폴더**:
-    - **`components/`**: 화면을 구성하는 부품들 (버튼, 슬라이더, 채팅창).
-        - `ControlPanel`: 로봇 조작 버튼 모음.
-        - `FaceController`: 얼굴 표정 디버깅용 슬라이더.
-        - `ChatPanel`: AI와 대화하는 창.
-    - **`Logic/`**: 백엔드와 통신하는 자바스크립트 코드.
+    - **`components/`**: 화면을 구성하는 부품들.
+        - `FaceControl.jsx`: 얼굴 렌더링 및 UI 통합 컨테이너.
+        - `Face/`: 얼굴 그래픽 구성 요소 (Eye, Mouth, FaceRenderer).
+        - `Controller/`: 파라미터 조절용 슬라이더 (FaceController) - *20종 표정 프리셋(10종 구현 완료 - 평온, 기쁨, 환희, 슬픔, 분노, 놀람, 의심, 고민, 공포, 지루함) 내장*.
+    - **`constants/`**: 상수 정의 파일 모음.
+        - `expressions.js`: 20가지 표정 프리셋의 Base(기본값) 및 Motion(진동) 파라미터 정의.
 
 ---
 
 ## ⚙️ 작동 원리 (Process Flow)
 
-1. **사용자 입력**: 웹에서 [잡기] 버튼을 클릭합니다.
-2. **프론트엔드**: `UserRequestDTO` 형식의 JSON을 만들어 `POST /api/request`로 보냅니다.
+1. **사용자 입력**: 채팅창에 명령을 입력합니다.
+2. **프론트엔드**: `UserRequestDTO`를 JSON으로 변환하여 `POST /api/request`로 보냅니다.
 3. **백엔드(API Server)**: 요청을 받아 `RobotController`에게 전달합니다.
 4. **실행 및 피드백**:
     - 로봇이 움직이는 동안 `sim_client.py`가 시뮬레이터에서 실시간 영상을 받아옵니다.
