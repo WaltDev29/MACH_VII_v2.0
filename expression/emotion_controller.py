@@ -23,6 +23,10 @@ class EmotionController:
         self.last_preset_id = "neutral"
         self.muscles = {}
         
+        # State Tracking
+        self.current_brain_state = "IDLE"
+        self.state_enter_time = time.time()
+        
         # Heartbeat 타이머
         self.last_heartbeat_time = 0.0
         
@@ -38,17 +42,25 @@ class EmotionController:
         agent_state = state.get("agent_state", "IDLE")
         
         with self._lock:
+            # 상태 변경 시 초기화
+            if agent_state != self.current_brain_state:
+                self.current_brain_state = agent_state
+                self.state_enter_time = time.time()
+                print(f"[Emotion] Brain State Changed: {agent_state}")
+
             if agent_state == "PLANNING": # THINKING
                 self.target_vector.focus = 0.8
                 self.target_vector.effort = 0.3
-                self.target_vector.curiosity = 0.7 # 생각 중엔 호기심도
+                self.target_vector.curiosity = 0.7 
             elif agent_state == "EXECUTING":
                 self.target_vector.focus = 1.0
                 self.target_vector.effort = 0.6
                 self.target_vector.confidence = 0.5
             elif agent_state == "IDLE":
-                self.target_vector.focus = 0.1
-                self.target_vector.effort = 0.0
+                # [Refined] IDLE 초기에는 Neutral(평온) 유지
+                # Bored(지루함) 조건(focus < 0.2)에 걸리지 않도록 안전값 설정
+                self.target_vector.focus = 0.3
+                self.target_vector.effort = 0.1
                 self.target_vector.frustration = 0.0
                 self.target_vector.confidence = 0.5 
                 self.target_vector.curiosity = 0.3
@@ -100,6 +112,9 @@ class EmotionController:
         
         new_preset = "neutral"
         with self._lock:
+            # [Advanced Logic] 시간에 따른 상태 변화 (Drift)
+            self._apply_temporal_drift(dt)
+            
             curr = self.current_vector
             tgt = self.target_vector
             
@@ -142,6 +157,20 @@ class EmotionController:
                 })
                 self.last_heartbeat_time = now
 
+    def _apply_temporal_drift(self, dt: float):
+        """시간 경과 및 배터리 상태에 따른 목표 벡터 자동 조정"""
+        from state.system_state import system_state
+        
+        # 1. [Boredom Drift] IDLE 상태가 오래 지속되면 지루함으로 이동
+        if self.current_brain_state == "IDLE":
+             elapsed = time.time() - self.state_enter_time
+             if elapsed > 10.0: # 10초 이상 대기 시
+                 # Focus와 Effort를 서서히 낮춰서 Bored 조건(둘다 < 0.2) 충족 유도
+                 self.target_vector.focus = max(0.05, self.target_vector.focus - 0.05 * dt)
+                 self.target_vector.effort = max(0.0, self.target_vector.effort - 0.05 * dt)
+                 
+
+
     def get_closest_preset(self) -> str:
         """
         현재 감정 벡터(6차원)를 기반으로 프론트엔드의 20가지 프리셋 중 가장 적절한 ID를 도출합니다.
@@ -152,21 +181,26 @@ class EmotionController:
         if vec.frustration > 0.8: return "angry"     # 극심한 좌절 -> 분노
         if vec.confidence > 0.9: return "joy"        # 극심한 자신감 -> 환희
         if vec.focus > 0.9: return "focused"         # 극심한 집중 -> 집중
-        if vec.focus < 0.2 and vec.effort < 0.2: return "bored" # 낮은 집중/노력 -> 지루함
+        
+        # [Adjusted Threshold] 지루함 조건 강화 (IDLE 초기에는 안 걸리게)
+        if vec.focus < 0.2 and vec.effort < 0.2: return "bored" 
         
         # 2. 복합 감정 상태 확인
+        # [Priority Change] Thinking(Curiosity) 우선순위 상향
+        # "Thinking 할 때는 무조건 Thinking 베이스여야 함"
+        if vec.curiosity > 0.6:
+            if vec.frustration > 0.4: return "confused" # 호기심 + 좌절(잘 안풀림) -> 혼란
+            if vec.confidence > 0.5: return "excited"   # 호기심 + 자신감(잘 풀림) -> 흥분/신남
+            return "thinking"                           # 순수 고민
+
         if vec.frustration > 0.4:
             if vec.effort > 0.5: return "pain"       # 좌절 + 노력(힘듦) -> 고통
             if vec.confidence < 0.3: return "sad"    # 좌절 + 낮은 자신감 -> 슬픔
             return "suspicious"                      # 단순 좌절 -> 의심/불만
             
-        if vec.curiosity > 0.6:
-            if vec.confidence > 0.5: return "excited" # 호기심 + 자신감 -> 흥분/신남
-            return "thinking"                         # 호기심 -> 고민/생각
-            
         if vec.confidence > 0.6:
-             if vec.focus > 0.6: return "proud"       # 자신감 + 집중 -> 자부심
-             return "happy"                           # 단순 자신감 -> 기쁨
+            if vec.focus > 0.6: return "proud"       # 자신감 + 집중 -> 자부심
+            return "happy"                           # 단순 자신감 -> 기쁨
              
         if vec.focus > 0.6:
              return "focused"                         # 단순 집중
@@ -197,6 +231,9 @@ class EmotionController:
         self.running = True
         self.muscles = {} 
         self.last_preset_id = "neutral" 
+        self.current_brain_state = "IDLE" # 초기화
+        self.state_enter_time = time.time()
+        
         self.thread = threading.Thread(target=self._loop, daemon=True)
         self.thread.start()
         print("[Emotion] 컨트롤러 시작됨 (60Hz).")
