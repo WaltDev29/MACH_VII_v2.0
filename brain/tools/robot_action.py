@@ -41,4 +41,4 @@ def robot_action(intent: str) -> str:
     broadcaster.publish("action_intent", intent)
     broadcaster.publish("agent_thought", f"[Action] 실행 명령 하달: {intent}")
     
-    return f"로봇에게 '{intent}' 동작 수행을 지시했습니다."
+    return f"로봇에게 '{intent}' 동작 수행을 지시했습니다. 이제 사용 가능한 정보를 바탕으로 'Final Answer'를 작성하여 사용자에게 응답하십시오."
