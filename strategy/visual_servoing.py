@@ -372,8 +372,20 @@ class VisualServoing:
             else:
                 speed = 60  # 빠른 접근
             
-            # 6. 명령 전송
-            move_robot(cmd_x, cmd_y, cmd_z, speed)
+            # 6. 명령 전송 (중복 필터링 적용)
+            # 이전 명령과 거의 동일하면 전송 생략 (통신 부하 및 로그 스팸 방지)
+            should_send = True
+            if hasattr(self, '_last_sent_cmd'):
+                lx, ly, lz, ls = self._last_sent_cmd
+                dist = math.sqrt((cmd_x - lx)**2 + (cmd_y - ly)**2 + (cmd_z - lz)**2)
+                
+                # 위치 변화 0.1cm 미만이고 속도가 같으면 전송 스킵
+                if dist < 0.1 and speed == ls:
+                    should_send = False
+            
+            if should_send:
+                move_robot(cmd_x, cmd_y, cmd_z, speed)
+                self._last_sent_cmd = (cmd_x, cmd_y, cmd_z, speed)
             
             # 7. 주기적 디버그 로그 (5초마다)
             elapsed = time.time() - start_time

@@ -30,7 +30,7 @@ class SystemState:
     
     # 비전 시스템 상태
     camera_mode: str = "DEFAULT"     # "STEADYCAM", "EXPLORATION", "EXPLOITATION"
-    focus_score: float = 0.0         # 현재 주 카메라의 이미지 선명도 점수
+    focus_score: float = 100.0         # 현재 주 카메라의 이미지 선명도 점수 (임시로 100으로 설정)
     
     # VLM 분석을 위한 최신 프레임 (Base64 Encoded JPEG)
     last_frame_base64: Optional[str] = None

@@ -115,3 +115,10 @@ class PybulletVision(VisionBase):
         [Gripper Camera] 엔드 이펙터 카메라의 동기화된 패킷을 반환합니다.
         """
         return self.client.get_ee_synced_packet(include_depth=include_depth)
+
+    def measure_focus_score(self, image) -> float:
+        """
+        이미지의 선명도를 측정합니다.
+        시뮬레이션 환경은 항상 선명하므로 그저 100을 반환합니다.
+        """
+        return 100.0

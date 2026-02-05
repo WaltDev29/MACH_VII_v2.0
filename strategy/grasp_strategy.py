@@ -146,7 +146,7 @@ def _identify_target_object(object_name: str, detections: list) -> dict:
                          d['position']['z']**2)**0.5)
         else:
             # 이름 매칭 (부분 일치)
-            for det in detections:
+            for det in detections[0]:
                 det_name = det['name'].lower()
                 search_name = object_name.lower()
                 
@@ -161,7 +161,7 @@ def _identify_target_object(object_name: str, detections: list) -> dict:
         
         from brain.tools.vision_analyze import vision_analyze
         
-        detected_names = [d['name'] for d in detections]
+        detected_names = [d['name'] for d in detections[0]]
         query = f"나 지금 '{object_name}'을(를) 잡고 싶은데, 내 눈에는 {detected_names}만 보여. " \
                 f"이 목록 중에서 '{object_name}'일 가능성이 가장 높은 것은 뭐야? " \
                 f"목록에 있는 정확한 이름을 반환해줘. 매칭되는게 없으면 'NONE'이라고 답해줘."
